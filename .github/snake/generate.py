@@ -16,8 +16,9 @@ contribution data. In GitHub Actions, ${{ github.token }} works.
 
 Vendored from https://github.com/dahan8473/snake-and-commits at
 c55d1f1668e849195f395a9d93c56e74b68aaac2 (MIT, see LICENSE in this folder),
-with one fix: safe() lets the snake eat the last remaining cell even when
-it is a dead end (e.g. a lone Sunday in the final week column).
+with two changes: safe() lets the snake eat the last remaining cell even when
+it is a dead end (e.g. a lone Sunday in the final week column), and the body
+fades continuously from head to tail instead of stopping after 21 steps.
 """
 import argparse
 import json
@@ -210,6 +211,17 @@ def solve(grid, cap=999):
     return route, eats, growth, BASE_LEN + len(growth), len(remaining)
 
 
+TAIL_FADE = 0.9  # how far the tail end fades toward the empty-cell color (0..1)
+FADE_EVERY = 3    # steps between fade keyframes (smaller = smoother, bigger file)
+
+
+def mix(c1, c2, f):
+    """Blend hex color c1 toward c2 by fraction f."""
+    a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x + (y - x) * f):02x}" for x, y in zip(a, b))
+
+
 def render(grid, counts, months, route, eats, growth, theme, opts):
     t = THEMES[theme]
     ncols = len(grid)
@@ -253,12 +265,25 @@ def render(grid, counts, months, route, eats, growth, theme, opts):
                 post = base if (c, r) not in eaten_step or eaten_step[(c, r)] > b else t["levels"][0]
                 pa = pct(a)
                 stops += [(max(pa - .05, 0), None), (pa, t["head"])]
-                for age, col in t["ramp"]:
-                    if a + age < b:
-                        stops.append((pct(a + age), col))
+                # Bright head glow for the first few steps, then a continuous fade
+                # toward the empty-cell color all the way to the tail. Keyframes are
+                # linear, so one stop at the tail end gives a smooth gradient.
+                end = b if b < total else n - 1
+                glow = [(age, col) for age, col in t["ramp"] if age <= 4 and a + age < end]
+                for age, col in glow:
+                    stops.append((pct(a + age), col))
+                def faded(s_):
+                    # position along the body (0 = head, 1 = tail) at step s_
+                    return mix(t["snake"], t["levels"][0],
+                               TAIL_FADE * min(1.0, (s_ - a) / max(length_at(s_), 1)))
+                first = a + (glow[-1][0] if glow else 0) + FADE_EVERY
+                for s_ in range(first, end, FADE_EVERY):
+                    stops.append((pct(s_), faded(s_)))
+                if end > a:
+                    stops.append((max(pct(end) - (.05 if b < total else 0), stops[-1][0]), faded(end)))
                 if b < total:
                     pb = pct(b)
-                    stops += [(max(pb - .05, 0), None), (pb, post)]
+                    stops += [(pb, post)]
             frames, last = [], base
             for p, col in stops:
                 col = last if col is None else col
