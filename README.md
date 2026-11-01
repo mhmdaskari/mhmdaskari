@@ -1,4 +1,9 @@
-<h1 align="center">Mohammad Askari</h1>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/name-dark.svg" />
+    <img src="assets/name-light.svg" alt="Mohammad Askari" height="60" />
+  </picture>
+</p>
 
 <p align="center">
   <img src="https://readme-typing-svg.demolab.com?font=Inter&size=18&duration=3500&pause=1500&color=8B949E&center=true&vCenter=true&width=520&lines=Ph.D.+Candidate+at+UCLA;Machine+Learning+%C2%B7+AI+%C2%B7+Statistics" alt="Ph.D. Candidate at UCLA · Machine Learning, AI, Statistics" />
